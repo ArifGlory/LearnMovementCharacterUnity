@@ -19,6 +19,17 @@ namespace Script
         bool isRunPressed;
         private float rotataionFactorPerFrame = 15.0f;
         private float runMultiplier = 3.0f;
+        
+        //gravity
+        private float gravity = -9.8f;
+        private float groundedGravity = -0.5f;
+        
+        //jumping variables
+        private bool isJumpPressed = false;
+        private float initialJumpVelocity;
+        float maxJumpHeight = 2.0f;
+        float maxJumpTime = 0.5f;
+        bool isJumping = false;
 
         void Awake()
         {
@@ -33,6 +44,33 @@ namespace Script
             playerInput.CharacterControls.Run.started += onRunInput;
             playerInput.CharacterControls.Run.canceled += onRunInput;
             playerInput.CharacterControls.Run.performed += onRunInput;
+            
+            playerInput.CharacterControls.Jump.started += onJumpInput;
+            playerInput.CharacterControls.Jump.canceled += onJumpInput;
+            playerInput.CharacterControls.Jump.performed += onJumpInput;
+            
+            setupJumpVariables();
+        }
+
+        void setupJumpVariables()
+        {
+            float timeToApex = maxJumpTime / 2;
+            gravity = ( -2 * maxJumpHeight) / Mathf.Pow(timeToApex, 2);
+            initialJumpVelocity = (2 * maxJumpHeight) / timeToApex;
+        }
+
+        void handleJump()
+        {
+            if (!isJumping && characterController.isGrounded && isJumpPressed)
+            {
+                isJumping = true;
+                currentMovement.y = initialJumpVelocity;
+                currentRunMovement.y = initialJumpVelocity;
+            }else if (!isJumpPressed && isJumping && characterController.isGrounded)
+            {
+                isJumping = false;
+            }
+           
         }
 
         void handleRotation()
@@ -66,6 +104,11 @@ namespace Script
             isRunPressed = context.ReadValueAsButton();
         }
 
+        void onJumpInput(InputAction.CallbackContext context)
+        {
+            isJumpPressed = context.ReadValueAsButton();
+        }
+
         void handleAnimation()
         {
             bool isWalking = animator.GetBool(IsWalking);
@@ -94,21 +137,20 @@ namespace Script
         {
             if (characterController.isGrounded)
             {
-                float groundedGravity = -0.5f;
+                
                 currentMovement.y = groundedGravity;
                 currentRunMovement.y = groundedGravity;
             }
             else
             {
-                float gravity = -9.8f;
-                currentMovement.y = gravity;
-                currentRunMovement.y = gravity;
+                currentMovement.y += gravity * Time.deltaTime;
+                currentRunMovement.y += gravity * Time.deltaTime;
             }
         }
         
         void Update()
         {
-            handleGravity();
+            
             handleRotation();
             handleAnimation();
             
@@ -121,6 +163,8 @@ namespace Script
                 characterController.Move(currentMovement * Time.deltaTime);
             }
             
+            handleGravity();
+            handleJump();
         }
 
         void OnEnable()
