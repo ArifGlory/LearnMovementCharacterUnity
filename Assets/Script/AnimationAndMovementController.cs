@@ -12,9 +12,13 @@ namespace Script
         private CharacterController characterController;
         private Vector2 currentMovementInput;
         private Animator animator;
+        
         Vector3 currentMovement;
+        Vector3 currentRunMovement;
         bool isMovementPressed;
-        private float rotataionFactorPerFrame = 1.0f;
+        bool isRunPressed;
+        private float rotataionFactorPerFrame = 15.0f;
+        private float runMultiplier = 3.0f;
 
         void Awake()
         {
@@ -25,6 +29,10 @@ namespace Script
             playerInput.CharacterControls.Move.started += onMovementInput;
             playerInput.CharacterControls.Move.canceled += onMovementInput;
             playerInput.CharacterControls.Move.performed += onMovementInput;
+            
+            playerInput.CharacterControls.Run.started += onRunInput;
+            playerInput.CharacterControls.Run.canceled += onRunInput;
+            playerInput.CharacterControls.Run.performed += onRunInput;
         }
 
         void handleRotation()
@@ -47,7 +55,15 @@ namespace Script
             currentMovementInput = context.ReadValue<Vector2>();
             currentMovement.x = currentMovementInput.x;
             currentMovement.z = currentMovementInput.y;
+            
+            currentRunMovement.x = currentMovementInput.x * runMultiplier;
+            currentRunMovement.z = currentMovementInput.y * runMultiplier;
             isMovementPressed = currentMovementInput.x != 0 || currentMovementInput.y != 0;
+        }
+
+        void onRunInput(InputAction.CallbackContext context)
+        {
+            isRunPressed = context.ReadValueAsButton();
         }
 
         void handleAnimation()
@@ -63,14 +79,30 @@ namespace Script
             {
                 animator.SetBool(IsWalking, false);
             }
-            
+
+
+            if ((isMovementPressed && isRunPressed) && !isRunning)
+            {
+                animator.SetBool(IsRunning, true);
+            }else if ((!isMovementPressed && !isRunPressed) && isRunning)
+            {
+                animator.SetBool(IsRunning, false);
+            }
         }
 
         void Update()
         {
             handleRotation();
             handleAnimation();
-            characterController.Move(currentMovement * Time.deltaTime);
+            if (isRunPressed)
+            {
+                characterController.Move(currentRunMovement * Time.deltaTime);
+            }
+            else
+            {
+                characterController.Move(currentMovement * Time.deltaTime);
+            }
+            
         }
 
         void OnEnable()
