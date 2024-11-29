@@ -90,10 +90,28 @@ namespace Script
             }
         }
 
+        void handleGravity()
+        {
+            if (characterController.isGrounded)
+            {
+                float groundedGravity = -0.5f;
+                currentMovement.y = groundedGravity;
+                currentRunMovement.y = groundedGravity;
+            }
+            else
+            {
+                float gravity = -9.8f;
+                currentMovement.y = gravity;
+                currentRunMovement.y = gravity;
+            }
+        }
+        
         void Update()
         {
+            handleGravity();
             handleRotation();
             handleAnimation();
+            
             if (isRunPressed)
             {
                 characterController.Move(currentRunMovement * Time.deltaTime);
