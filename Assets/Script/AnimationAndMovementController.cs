@@ -7,6 +7,7 @@ namespace Script
     {
         private static readonly int IsWalking = Animator.StringToHash("isWalking");
         private static readonly int IsRunning = Animator.StringToHash("isRunning");
+        private static readonly int IsJumping = Animator.StringToHash("isJumping");
         
         private PlayerInputActions playerInput;
         private CharacterController characterController;
@@ -22,14 +23,15 @@ namespace Script
         
         //gravity
         private float gravity = -9.8f;
-        private float groundedGravity = -0.5f;
+        private float groundedGravity = -.05f;
         
         //jumping variables
         private bool isJumpPressed = false;
         private float initialJumpVelocity;
-        float maxJumpHeight = 2.0f;
-        float maxJumpTime = 0.5f;
+        float maxJumpHeight = 4.0f;
+        float maxJumpTime = 0.75f;
         bool isJumping = false;
+        bool isJumpAnimating = false;
 
         void Awake()
         {
@@ -64,8 +66,32 @@ namespace Script
             if (!isJumping && characterController.isGrounded && isJumpPressed)
             {
                 isJumping = true;
+                
                 currentMovement.y = initialJumpVelocity;
                 currentRunMovement.y = initialJumpVelocity;
+            }else if (!isJumpPressed && isJumping && characterController.isGrounded)
+            {
+                isJumping = false;
+            }
+           
+        }
+        
+        void handleJumpType2()
+        {
+            if (!isJumping && characterController.isGrounded && isJumpPressed)
+            {
+                //set animator here
+                animator.SetBool(IsJumping, true);
+                isJumpAnimating = true;
+                
+                
+                isJumping = true;
+                float previousYVelocity = currentMovement.y;
+                float newYVelocity = currentMovement.y + (gravity * Time.deltaTime);
+                float nextYVelocity = (previousYVelocity + newYVelocity) * .5f;
+
+                currentMovement.y = initialJumpVelocity * .5f;
+                currentRunMovement.y = initialJumpVelocity * .5f;
             }else if (!isJumpPressed && isJumping && characterController.isGrounded)
             {
                 isJumping = false;
@@ -135,16 +161,60 @@ namespace Script
 
         void handleGravity()
         {
+           
             if (characterController.isGrounded)
             {
+                currentMovement.y = groundedGravity;
+                currentRunMovement.y = groundedGravity;
+            } else {
+                
+                
+                currentMovement.y += gravity * Time.deltaTime;
+                currentRunMovement.y += gravity * Time.deltaTime;
+            }
+        }
+        
+        void handleGravityType2()
+        {
+            //bool isFalling = currentMovement.y <= 0.0f || !isJumpPressed;
+            bool isFalling = currentMovement.y <= 0.0f;
+            /*
+             * kalau pake kondisi  || !isJumpPressed , berpengaruh ke semakin tombol ditekan akan semakin lama jumping nya di udara
+             * kalau ga pake || !isJumpPressed , wakti di udaranya statis
+             */
+            
+            
+            float fallMultiplier = 2.0f;
+            
+            
+            if (characterController.isGrounded)
+            {
+                //set animator here
+                if (isJumpAnimating)
+                {
+                    animator.SetBool(IsJumping, false);
+                    isJumpAnimating = false;
+                }
+                
                 
                 currentMovement.y = groundedGravity;
                 currentRunMovement.y = groundedGravity;
-            }
-            else
+            } else if (isFalling)
             {
-                currentMovement.y += gravity * Time.deltaTime;
-                currentRunMovement.y += gravity * Time.deltaTime;
+                float previousYVelocity = currentMovement.y;
+                float newYVelocity = currentMovement.y + (gravity * fallMultiplier * Time.deltaTime);
+                float nextYVelocity = (previousYVelocity + newYVelocity) * .5f;
+                
+                currentMovement.y = nextYVelocity;
+                currentRunMovement.y = nextYVelocity;
+            } 
+            else {
+                float previousYVelocity = currentMovement.y;
+                float newYVelocity = currentMovement.y + (gravity * Time.deltaTime);
+                float nextYVelocity = (previousYVelocity + newYVelocity) * .5f;
+                
+                currentMovement.y = nextYVelocity;
+                currentRunMovement.y = nextYVelocity;
             }
         }
         
@@ -163,8 +233,8 @@ namespace Script
                 characterController.Move(currentMovement * Time.deltaTime);
             }
             
-            handleGravity();
-            handleJump();
+            handleGravityType2();
+            handleJumpType2();
         }
 
         void OnEnable()
